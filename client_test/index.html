@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Client</title>
+    <script src="http://localhost:8080/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <input id="messageInput" type="text"/>
+    <button id="sendButton">send</button>
+</body>
+<script type="text/javascript">
+  window.onload = function() {
+    const socket = io.connect('http://localhost:8080');
+    socket.on('connect', function () {
+      socket.on('message', function (msg) {
+        console.log(msg)
+      });
+      document.getElementById('sendButton').addEventListener('click', function(){
+        var message = document.getElementById('messageInput').value;
+        socket.send(message);
+      })
+      //
+    });
+  };
+</script>
+</html>
