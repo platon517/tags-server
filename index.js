@@ -42,14 +42,35 @@ const deleteChatRoom = room => {
   delete chatRooms[`${room.users[0].id}${room.users[1].id}`];
 };
 
-const endChat = user => {
+const endChat = (user, findNext = false) => {
   if (user.room !== null) {
     user.room.users.forEach( roomUser => {
       const nowUser = io.sockets.sockets[roomUser.id];
-      nowUser && nowUser.emit('endChat', { msg: `${nowUser.id === user.id ? null : 'User disconnected' }`});
+      nowUser && nowUser.emit('endChat', {findNext: findNext, log: `${nowUser.id === user.id ? null : 'User disconnected'}`});
+      if (findNext) findSubmissions(user);
     } );
     deleteChatRoom(user.room);
   }
+};
+
+const findSubmissions = (user, socket) => {
+  searchingHeap.push(user);
+  findCommonTagsUser(user).then(res => {
+    if (!res) {
+      //socket.emit('noUsers');
+      //deleteFromSearch(user);
+    } else {
+      socket.emit('userFound', {
+        user: res
+      });
+      io.sockets.sockets[res.id].emit('userFound', {
+        user: user
+      });
+      deleteFromSearch(res);
+      deleteFromSearch(user);
+      createChatRoom(user, res);
+    }
+  });
 };
 
 io.sockets.on('connection', socket => {
@@ -69,30 +90,7 @@ io.sockets.on('connection', socket => {
   socket.on('findChat', msg => {
     user.name = msg.user.name;
     user.tags = msg.user.tags;
-    searchingHeap.push(user);
-    socket.json.send({
-      'event': 'findChatInfoReceived',
-      user: user,
-      users: searchingHeap.length,
-    });
-    findCommonTagsUser(user).then(res => {
-      if (!res) {
-        //socket.emit('noUsers');
-        //deleteFromSearch(user);
-      } else {
-        console.log('User Found: ', res);
-        socket.emit('userFound', {
-          user: res
-        });
-        io.sockets.sockets[res.id].emit('userFound', {
-          user: user
-        });
-        deleteFromSearch(res);
-        deleteFromSearch(user);
-        createChatRoom(user, res);
-      }
-    });
-    console.log(`user ${ID} is searching`);
+    findSubmissions(user, socket);
   });
 
   socket.on('startChat', msg => {
@@ -106,11 +104,15 @@ io.sockets.on('connection', socket => {
 
   socket.on('cancelSearch', () => {
     console.log(`user ${ID}'s search canceled`);
-    deleteFromSearch(user);
+    endChat(user);
   });
 
   socket.on('escapeChat', () => {
     endChat(user);
+  });
+
+  socket.on('nextSubmission', () => {
+    endChat(user, true);
   });
 
   socket.on('message', msg => {
