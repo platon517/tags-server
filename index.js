@@ -15,12 +15,12 @@ const commonTags = (target, user) =>
     return user.tags.filter( userTag => userTag.name.toLowerCase() === tag.name.toLowerCase() ).length > 0;
   }).length;
 
-const findCommonTagsUser = async user =>
-  await [...searchingHeap]
-    .sort( (target, nextTarget) => commonTags(nextTarget, user) - commonTags(target, user) )
-    .filter( item => {
-      return ((item !== user) && (commonTags(item, user) > 0 )) || null;
-    } )[0];
+const findCommonTagsUser = user =>
+  [...searchingHeap]
+  .sort( (target, nextTarget) => commonTags(nextTarget, user) - commonTags(target, user) )
+  .filter( item => {
+    return ((item !== user) && (commonTags(item, user) > 0 )) || null;
+  } )[0];
 
 const deleteFromSearch = user => searchingHeap.splice(searchingHeap.indexOf(user), 1);
 
@@ -42,35 +42,39 @@ const deleteChatRoom = room => {
   delete chatRooms[`${room.users[0].id}${room.users[1].id}`];
 };
 
-const endChat = (user, findNext = false) => {
+const endChat = (user, findNext = false, socket = null) => {
   if (user.room !== null) {
+    const roomUsers = [];
     user.room.users.forEach( roomUser => {
       const nowUser = io.sockets.sockets[roomUser.id];
       nowUser && nowUser.emit('endChat', {findNext: findNext, log: `${nowUser.id === user.id ? null : 'User disconnected'}`});
-      if (findNext) findSubmissions(user);
+      if (findNext) roomUsers.push(roomUser);
     } );
     deleteChatRoom(user.room);
+    if (findNext) roomUsers.forEach( roomUser => findSubmissions(roomUser, socket) );
   }
 };
 
 const findSubmissions = (user, socket) => {
   searchingHeap.push(user);
-  findCommonTagsUser(user).then(res => {
-    if (!res) {
-      //socket.emit('noUsers');
-      //deleteFromSearch(user);
-    } else {
-      socket.emit('userFound', {
-        user: res
-      });
-      io.sockets.sockets[res.id].emit('userFound', {
-        user: user
-      });
-      deleteFromSearch(res);
-      deleteFromSearch(user);
-      createChatRoom(user, res);
-    }
-  });
+  console.log(`searching heap:`);
+  searchingHeap.forEach( i => console.log(i.id));
+  const commonTagsUser = findCommonTagsUser(user);
+  if (!commonTagsUser) {
+    //socket.emit('noUsers');
+    //deleteFromSearch(user);
+  } else {
+    console.log(`Found user for ${user.id}: ${commonTagsUser.id}`);
+    socket.emit('userFound', {
+      user: commonTagsUser
+    });
+    io.sockets.sockets[commonTagsUser.id].emit('userFound', {
+      user: user
+    });
+    deleteFromSearch(commonTagsUser);
+    deleteFromSearch(user);
+    createChatRoom(user, commonTagsUser);
+  }
 };
 
 io.sockets.on('connection', socket => {
@@ -112,7 +116,7 @@ io.sockets.on('connection', socket => {
   });
 
   socket.on('nextSubmission', () => {
-    endChat(user, true);
+    endChat(user, true, socket);
   });
 
   socket.on('message', msg => {
