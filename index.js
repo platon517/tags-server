@@ -1,6 +1,9 @@
 const constants = require('./constants');
 
-const io = require('socket.io').listen(8080);
+const io = require('socket.io')(8080, {
+  pingInterval: 60000,
+  pingTimeout: 300000,
+});
 
 const users = [];
 
