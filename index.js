@@ -25,7 +25,8 @@ const findCommonTagsUser = user =>
     return ((item !== user) && (commonTags(item, user) > 0 )) || null;
   } )[0];
 
-const deleteFromSearch = user => searchingHeap.splice(searchingHeap.indexOf(user), 1);
+const deleteFromSearch = user =>
+  searchingHeap.indexOf(user) > -1 && searchingHeap.splice(searchingHeap.indexOf(user), 1);
 
 const createChatRoom = (user_1, user_2) => {
   const room = {
@@ -45,20 +46,26 @@ const deleteChatRoom = room => {
   delete chatRooms[`${room.users[0].id}${room.users[1].id}`];
 };
 
-const endChat = (user, findNext = false) => {
+const endChat = (user, findNext = false, partnersOnly = false) => {
   if (user.room !== null) {
     const roomUsers = [];
     user.room.users.forEach( roomUser => {
       const nowUser = io.sockets.sockets[roomUser.id];
-      nowUser && nowUser.emit('endChat', {findNext: findNext, log: `${nowUser.id === user.id ? null : 'User disconnected'}`});
+      nowUser && nowUser.emit('endChat', {
+        findNext: findNext && (partnersOnly ? roomUser !== user : true),
+        log: `${nowUser.id === user.id ? null : 'User disconnected'}`
+      });
       if (findNext) roomUsers.push(roomUser);
     } );
     deleteChatRoom(user.room);
-    if (findNext) roomUsers.forEach( roomUser => findSubmissions(roomUser) );
+    if (findNext) roomUsers.forEach( roomUser => {
+      partnersOnly ? ( roomUser !== user && findSubmissions(roomUser) ) : findSubmissions(roomUser);
+    });
   }
 };
 
 const findSubmissions = user => {
+  console.log(`findSubmissions: ${user.id}`);
   searchingHeap.push(user);
   console.log(`searching heap:`);
   searchingHeap.forEach( i => console.log(i.id));
@@ -112,7 +119,7 @@ io.sockets.on('connection', socket => {
 
   socket.on('cancelSearch', () => {
     console.log(`user ${ID}'s search canceled`);
-    endChat(user);
+    endChat(user, true, true);
     deleteFromSearch(user);
   });
 
