@@ -97,6 +97,7 @@ io.sockets.on('connection', socket => {
   socket.on('findChat', msg => {
     user.name = msg.user.name;
     user.tags = msg.user.tags;
+    user.avatar = msg.user.avatar;
     findSubmissions(user, socket);
   });
 
@@ -112,6 +113,7 @@ io.sockets.on('connection', socket => {
   socket.on('cancelSearch', () => {
     console.log(`user ${ID}'s search canceled`);
     endChat(user);
+    deleteFromSearch(user);
   });
 
   socket.on('escapeChat', () => {
