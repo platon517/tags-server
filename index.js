@@ -87,6 +87,13 @@ const findSubmissions = user => {
   }
 };
 
+const disconnect = user => {
+  users.splice(users.indexOf(user), 1);
+  deleteFromSearch(user);
+  endChat(user);
+  console.log('disconnect', users.length);
+};
+
 io.sockets.on('connection', socket => {
   let user = {
     id: socket.id,
@@ -131,23 +138,24 @@ io.sockets.on('connection', socket => {
   });
 
   socket.on('message', msg => {
-    const room = chatRooms[`${user.id}${msg.pair.id}`] || chatRooms[`${msg.pair.id}${user.id}`];
-    const message = {
-      id: room.messages.length,
-      senderId: msg.senderId,
-      text: msg.message.text,
-      //attachments: []
-    };
-    room.messages.push(message);
-    //socket.emit('message', message);
-    io.sockets.sockets[msg.pair.id].emit('message', message);
+    try {
+      const room = chatRooms[`${user.id}${msg.pair.id}`] || chatRooms[`${msg.pair.id}${user.id}`];
+      const message = {
+        id: room.messages.length,
+        senderId: msg.senderId,
+        text: msg.message.text,
+        //attachments: []
+      };
+      room.messages.push(message);
+      //socket.emit('message', message);
+      io.sockets.sockets[msg.pair.id].emit('message', message);
+    } catch (e) {
+      console.log(e);
+    }
   });
 
   socket.on('disconnect', () => {
     //io.sockets.json.send({'event': 'userSplit', 'name': ID, 'time': time});
-    users.splice(users.indexOf(user), 1);
-    deleteFromSearch(user);
-    endChat(user);
-    console.log('disconnect', users.length);
+    disconnect(user);
   });
 });
