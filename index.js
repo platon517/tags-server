@@ -112,8 +112,7 @@ io.sockets.on('connection', socket => {
     const room = chatRooms[`${user.id}${msg.pair.id}`] || chatRooms[`${msg.pair.id}${user.id}`];
     user.status = constants.READY;
     if( room.users.every( user => user.status === constants.READY )) {
-      socket.emit('partnerIsReady');
-      io.sockets.sockets[msg.pair.id].emit('partnerIsReady');
+      room.users.forEach( roomUser => io.sockets.sockets[roomUser.id].emit('partnerIsReady'));
     }
   });
 
