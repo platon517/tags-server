@@ -132,6 +132,11 @@ io.sockets.on('connection', socket => {
     }
   });
 
+  socket.on('sendPublicKey', msg => {
+    console.log(msg.pair.id);
+    io.sockets.sockets[msg.pair.id].emit('getPublicKey', msg.publicKey);
+  });
+
   socket.on('cancelSearch', () => {
     console.log(`user ${ID}'s search canceled`);
     endChat(user, true, true);
