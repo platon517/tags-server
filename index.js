@@ -133,7 +133,6 @@ io.sockets.on('connection', socket => {
   });
 
   socket.on('sendPublicKey', msg => {
-    console.log(msg.pair.id);
     io.sockets.sockets[msg.pair.id].emit('getPublicKey', msg.publicKey);
   });
 
