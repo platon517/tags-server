@@ -1,5 +1,6 @@
 const constants = require('./constants');
 
+const endcrypt = require('endcrypt');
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
@@ -104,6 +105,9 @@ const disconnect = user => {
 };
 
 io.sockets.on('connection', socket => {
+
+  const bufferUser = new endcrypt.Endcrypt();
+
   let user = {
     id: socket.id,
     tags: [],
@@ -132,6 +136,12 @@ io.sockets.on('connection', socket => {
     }
   });
 
+  socket.on('sendPublicKey', msg => {
+    console.log(msg.pair.id);
+    bufferUser.receiveHandshake(msg.publicKey);
+    io.sockets.sockets[msg.pair.id].emit('getPublicKey', msg.publicKey);
+  });
+
   socket.on('cancelSearch', () => {
     console.log(`user ${ID}'s search canceled`);
     endChat(user, true, true);
@@ -157,6 +167,8 @@ io.sockets.on('connection', socket => {
       };
       room.messages.push(message);
       //socket.emit('message', message);
+      console.log(`crypted msg: ${message.text}`);
+      console.log(`decrypted msg: ${bufferUser.decrypt(JSON.parse(message.text))}`);
       io.sockets.sockets[msg.pair.id].emit('message', message);
     } catch (e) {
       console.log(e);
