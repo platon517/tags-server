@@ -167,14 +167,6 @@ io.sockets.on('connection', socket => {
     }
   });
 
-  socket.on('sendVideoResponse', msg => {
-    try {
-      io.sockets.sockets[msg.pair.id].emit('getVideoResponse', msg.token);
-    } catch (e) {
-      console.log(e);
-    }
-  });
-
   socket.on('disconnect', () => {
     //io.sockets.json.send({'event': 'userSplit', 'name': ID, 'time': time});
     disconnect(user);
